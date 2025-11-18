@@ -45,6 +45,7 @@ def home_screen():
 # 1. 입양 적합성 & 품종 추천
 # ---------------------
 def adopt_screen():
+    st.button("🏠 홈으로", on_click=go_home, key="home_top1")  # 상단 홈 버튼
     st.header("🐶 입양 적합성 & 품종 추천")
 
     col1, col2 = st.columns(2)
@@ -88,12 +89,13 @@ def adopt_screen():
 
         st.write("✅ 선택 완료:", st.session_state.checklist)
 
-    st.button("🏠 홈으로", on_click=go_home, key="home_back1")
+    st.button("🏠 홈으로", on_click=go_home, key="home_back1")  # 하단 홈 버튼
 
 # ---------------------
 # 2. 예방접종 & 건강 루틴
 # ---------------------
 def calendar_screen():
+    st.button("🏠 홈으로", on_click=go_home, key="home_top2")  # 상단 홈 버튼
     st.header("📅 예방접종 & 건강 루틴")
 
     breeds = [
@@ -113,8 +115,6 @@ def calendar_screen():
             st.write(f"{vac}: {(today + timedelta(days=i * 30)).strftime('%Y-%m-%d')}")
 
     st.subheader("건강 루틴 기록")
-
-    # 날짜 입력 (월/일)
     col_date = st.columns(2)
     with col_date[0]:
         month = st.number_input("월", 1, 12, datetime.today().month)
@@ -147,12 +147,13 @@ def calendar_screen():
     if poop != "정상":
         st.warning("루틴 이탈 감지: 이상 패턴!")
 
-    st.button("🏠 홈으로", on_click=go_home, key="home_back2")
+    st.button("🏠 홈으로", on_click=go_home, key="home_back2")  # 하단 홈 버튼
 
 # ---------------------
 # 3. 증상 Q&A
 # ---------------------
 def qa_screen():
+    st.button("🏠 홈으로", on_click=go_home, key="home_top3")  # 상단 홈 버튼
     st.header("❓ 증상 Q&A ‘안심 가이드’")
     symptom = st.text_input("증상 입력 (예: 구토, 설사 등)")
 
@@ -174,12 +175,13 @@ def qa_screen():
         for a in advice:
             st.write("• " + a)
 
-    st.button("🏠 홈으로", on_click=go_home, key="home_back3")
+    st.button("🏠 홈으로", on_click=go_home, key="home_back3")  # 하단 홈 버튼
 
 # ---------------------
 # 4. 병원 & 보험 비교
 # ---------------------
 def compare_screen():
+    st.button("🏠 홈으로", on_click=go_home, key="home_top4")  # 상단 홈 버튼
     st.header("🏥 병원 & 보험 비교")
 
     st.subheader("병원 검색")
@@ -218,19 +220,20 @@ def compare_screen():
         st.write(f"- 특약 / 주의: {ins.get('특약', '-')}")
         st.write(f"- 가입 가능 연령: {ins.get('가입 가능 연령', '-')}")
 
-    st.button("🏠 홈으로", on_click=go_home, key="home_back4")
+    st.button("🏠 홈으로", on_click=go_home, key="home_back4")  # 하단 홈 버튼
 
 # ---------------------
 # 5. 커뮤니티
 # ---------------------
 def community_screen():
+    st.button("🏠 홈으로", on_click=go_home, key="home_top5")  # 상단 홈 버튼
     st.header("💬 커뮤니티")
 
     with st.form("post_form"):
         user_post = st.text_area("게시글 작성")
         submitted = st.form_submit_button("게시글 올리기")
         if submitted and user_post:
-            st.session_state.posts.append({"text": user_post, "likes": 0, "comments": []})
+            st.session_state.posts.insert(0, {"text": user_post, "likes": 0, "comments": []})  # 가장 위에 추가
 
     for i, post in enumerate(st.session_state.posts):
         st.write("---")  # 게시글 구분선
@@ -251,7 +254,7 @@ def community_screen():
             for c_idx, comment in enumerate(post["comments"], 1):
                 st.write(f"{c_idx}. {comment}")
 
-    st.button("🏠 홈으로", on_click=go_home, key="home_back5")
+    st.button("🏠 홈으로", on_click=go_home, key="home_back5")  # 하단 홈 버튼
 
 # ---------------------
 # 메뉴 전환
@@ -266,3 +269,4 @@ menu_dict = {
 }
 
 menu_dict.get(st.session_state.menu, home_screen)()
+
