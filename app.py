@@ -11,9 +11,11 @@ if "menu" not in st.session_state:
 if "checklist" not in st.session_state:
     st.session_state.checklist = []
 if "adopt_recommended" not in st.session_state:
-    st.session_state.adopt_recommended = []  # 추천 품종 보관
+    st.session_state.adopt_recommended = []
 if "posts" not in st.session_state:
     st.session_state.posts = []
+if "weights" not in st.session_state:
+    st.session_state.weights = []  # (날짜, 체중) 저장용
 
 def go_home():
     st.session_state.menu = "home"
@@ -45,11 +47,10 @@ def home_screen():
 def adopt_screen():
     st.header("🐶 입양 적합성 & 품종 추천")
 
-    # 입력
     col1, col2 = st.columns(2)
     with col1:
         work_hours = st.slider("근무 시간(시간/일)", 0, 12, 8)
-        budget_str = st.text_input("월 예산(원)", "200000")  # 직접 입력
+        budget_str = st.text_input("월 예산(원)", "200000")
         try:
             budget = int(budget_str.replace(",", ""))
         except ValueError:
@@ -61,7 +62,6 @@ def adopt_screen():
         activity = st.selectbox("활동성", ["낮음", "보통", "높음"])
         allergy = st.radio("알레르기 여부", ["없음", "있음"])
 
-    # 추천받기
     if st.button("추천 받기"):
         breeds = [
             "비글", "시바견", "골든리트리버", "푸들", "치와와", "닥스훈트", "보더콜리",
@@ -72,17 +72,14 @@ def adopt_screen():
         recommended = list(np.random.choice(breeds, 3, replace=False))
         st.session_state.adopt_recommended = recommended
 
-    # 추천 결과가 있을 때만 보이게
     if st.session_state.adopt_recommended:
         st.subheader("추천 품종")
         for idx, breed in enumerate(st.session_state.adopt_recommended, 1):
             st.write(f"{idx}. {breed}")
 
-        # 체크리스트
         checklist_items = ["사료", "배변패드", "목줄/하네스", "장난감", "목욕용품", "건강검진 예약"]
         st.subheader("필수 준비물 체크리스트")
         for item in checklist_items:
-            # 체크박스 기본값을 기존 세션 상태로
             checked = st.checkbox(item, key=f"check_{item}", value=(item in st.session_state.checklist))
             if checked and item not in st.session_state.checklist:
                 st.session_state.checklist.append(item)
@@ -108,7 +105,6 @@ def calendar_screen():
     selected_breed = st.selectbox("강아지 품종 선택", breeds)
     age_months = st.number_input("나이(개월)", 0, 240, 6)
 
-    # 품종을 선택했으면 스케줄 보여줌
     if selected_breed:
         st.subheader("권장 예방접종 스케줄")
         today = datetime.today()
@@ -118,15 +114,22 @@ def calendar_screen():
 
     st.subheader("건강 루틴 기록")
 
-    # 체중 기록 (그래프용 데이터)
-    if "weights" not in st.session_state:
-        st.session_state.weights = []  # (날짜, 체중) 쌍 저장
+    # 날짜 입력 (월/일)
+    col_date = st.columns(2)
+    with col_date[0]:
+        month = st.number_input("월", 1, 12, datetime.today().month)
+    with col_date[1]:
+        day = st.number_input("일", 1, 31, datetime.today().day)
 
     weight = st.number_input("체중(kg)", 0.0, 100.0, 5.0)
     if st.button("체중 저장"):
-        st.session_state.weights.append((datetime.today(), weight))
+        try:
+            date_obj = datetime(datetime.today().year, month, day)
+            st.session_state.weights.append((date_obj, weight))
+            st.success(f"{month}/{day} 체중 {weight}kg 저장 완료")
+        except ValueError:
+            st.error("유효한 날짜를 입력하세요.")
 
-    # 체중 그래프
     if st.session_state.weights:
         df = {
             "date": [w[0] for w in st.session_state.weights],
@@ -151,21 +154,19 @@ def calendar_screen():
 # ---------------------
 def qa_screen():
     st.header("❓ 증상 Q&A ‘안심 가이드’")
-
     symptom = st.text_input("증상 입력 (예: 구토, 설사 등)")
 
     if st.button("검색"):
-        # 간단 예시 해결 로직
         advice = []
         lower = symptom.lower()
         if "구토" in lower:
-            advice.append("구토가 하루 이상 지속되면 즉시 동물병원에 가는 것이 좋습니다.")
+            advice.append("구토가 하루 이상 지속되면 즉시 동물병원에 가세요.")
         if "설사" in lower:
-            advice.append("설사가 계속되면 탈수 위험이 있으므로 수분을 자주 공급하고 필요시 진료를 고려하세요.")
+            advice.append("설사가 계속되면 탈수 위험이 있으므로 수분을 자주 공급하세요.")
         if "식욕" in lower or "먹" in lower:
-            advice.append("식욕이 많이 떨어지면 건강 상태를 체크할 필요가 있습니다.")
+            advice.append("식욕이 많이 떨어지면 건강 상태를 체크하세요.")
         if "호흡" in lower:
-            advice.append("호흡이 빠르거나 곤란하면 응급 상태일 수 있으니 즉시 병원 방문을 권장합니다.")
+            advice.append("호흡이 빠르거나 곤란하면 응급 상태일 수 있습니다.")
         if not advice:
             advice.append("증상 정보가 제한적입니다. 가능한 빨리 수의사 상담을 추천드립니다.")
 
@@ -181,12 +182,9 @@ def qa_screen():
 def compare_screen():
     st.header("🏥 병원 & 보험 비교")
 
-    # 병원 검색 (지역 기반)
     st.subheader("병원 검색")
     region = st.text_input("지역 입력 (예: 서울, 부산 등)")
     if st.button("검색 병원", key="hospital_search"):
-        # 예시 병원 데이터 (실제 데이터 사용하는 것이 어려울 수 있어서 더미 + 설명)
-        # 실제 앱이라면 공공 DB + API 필요
         sample_hospitals = [
             {"name": "서울24시동물병원", "location": "서울", "special": "24시"},
             {"name": "부산펫케어", "location": "부산", "special": "내과 / 외과"}
@@ -198,30 +196,27 @@ def compare_screen():
         else:
             st.info("해당 지역에 등록된 병원이 없습니다.")
 
-    # 보험 비교 (실제 펫보험 데이터 일부 반영)
     st.subheader("펫보험 비교")
-    # 아이펫 애니펫의 보험 보장 범위 일부 예시 (아이펫 사이트 참고) :contentReference[oaicite:0]{index=0}
     insurance_products = [
         {
             "회사": "삼성화재 (애니펫)",
             "보장 범위": "치료비 70% (질병/상해)",
             "특약 / 주의": "수술 연 2회 제한, 1회 최대 청구 한도 존재",
-            "가입 가능 연령": "생후 약 2개월 ~ 8세"  # 아이펫 정보 기반 :contentReference[oaicite:1]{index=1}
+            "가입 가능 연령": "생후 약 2개월 ~ 8세"
         },
         {
-            "회사": "DB손해보험 펫보험 (예시)",
+            "회사": "DB손해보험 펫보험",
             "보장 범위": "입원 + 외래 치료 보장 특화",
             "특약": "특정 수술 특약 가능",
             "가입 가능 연령": "견 / 묘에 따라 다름"
         }
-        # 실제 보험 정보를 더 채워야 함(공시자료, 약관 등 참조 필요)
     ]
     for ins in insurance_products:
+        st.write("---")
         st.write(f"**{ins['회사']}**")
         st.write(f"- 보장 범위: {ins['보장 범위']}")
         st.write(f"- 특약 / 주의: {ins.get('특약', '-')}")
         st.write(f"- 가입 가능 연령: {ins.get('가입 가능 연령', '-')}")
-        st.write("---")
 
     st.button("🏠 홈으로", on_click=go_home, key="home_back4")
 
@@ -237,10 +232,10 @@ def community_screen():
         if submitted and user_post:
             st.session_state.posts.append({"text": user_post, "likes": 0, "comments": []})
 
-    # 게시글 + 댓글
     for i, post in enumerate(st.session_state.posts):
+        st.write("---")  # 게시글 구분선
         st.write(f"게시글 {i+1}: {post['text']}")
-        col1, col2 = st.columns([1, 1])
+        col1, col2 = st.columns([1,1])
         with col1:
             if st.button(f"❤️ 좋아요 {i}", key=f"like_{i}"):
                 post["likes"] += 1
@@ -251,7 +246,6 @@ def community_screen():
                 if comment_submitted and comment_text:
                     post["comments"].append(comment_text)
 
-        # 댓글 표시
         if post["comments"]:
             st.subheader("🗨 댓글")
             for c_idx, comment in enumerate(post["comments"], 1):
@@ -272,4 +266,3 @@ menu_dict = {
 }
 
 menu_dict.get(st.session_state.menu, home_screen)()
-
