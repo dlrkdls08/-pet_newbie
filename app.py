@@ -9,6 +9,8 @@ if "menu" not in st.session_state:
     st.session_state.menu = "home"
 if "checklist" not in st.session_state:
     st.session_state.checklist = []
+if "posts" not in st.session_state:
+    st.session_state.posts = []
 
 def go_home():
     st.session_state.menu = "home"
@@ -40,37 +42,38 @@ def home_screen():
 def adopt_screen():
     st.header("🐶 입양 적합성 & 품종 추천")
 
-    # 사용자 정보 입력
     col1, col2 = st.columns(2)
     with col1:
         work_hours = st.slider("근무 시간(시간/일)", 0, 12, 8)
-        budget = st.number_input("월 예산(원)", 0, 1000000, 200000)
+        budget_str = st.text_input("월 예산(원)", "200000")  # 직접 입력 가능
+        try:
+            budget = int(budget_str.replace(",", ""))
+        except ValueError:
+            budget = 0
+            st.warning("숫자만 입력하세요")
         noise_tolerance = st.selectbox("소음 허용도", ["낮음", "보통", "높음"])
     with col2:
         home_type = st.selectbox("주거형태", ["아파트", "단독주택", "빌라"])
         activity = st.selectbox("활동성", ["낮음", "보통", "높음"])
         allergy = st.radio("알레르기 여부", ["없음", "있음"])
 
-    # 추천 버튼
     if st.button("추천 받기"):
-        # 더미 데이터 기반 추천
-        breeds = ["비글","시바견","골든리트리버","푸들","치와와","닥스훈트","보더콜리","슈나우저","포메라니안","불독",
-                  "말티즈","래브라도","요크셔테리어","시추","말라뮤트","웰시코기","보스턴테리어","닥스훈트(장모)","시바견(소형)","진돗개","기타"]
+        breeds = ["비글","시바견","골든리트리버","푸들","치와와","닥스훈트","보더콜리","슈나우저",
+                  "포메라니안","불독","말티즈","래브라도","요크셔테리어","시추","말라뮤트","웰시코기",
+                  "보스턴테리어","닥스훈트(장모)","시바견(소형)","진돗개","기타"]
         recommended = np.random.choice(breeds, 3, replace=False)
         st.subheader("추천 품종")
         for idx, breed in enumerate(recommended, 1):
             st.write(f"{idx}. {breed}")
 
-        # 체크리스트 생성
         checklist_items = ["사료", "배변패드", "목줄/하네스", "장난감", "목욕용품", "건강검진 예약"]
         st.subheader("필수 준비물 체크리스트")
         for item in checklist_items:
-            checked = st.checkbox(item, key=f"check_{item}")
+            checked = st.checkbox(item, key=f"check_{item}", value=(item in st.session_state.checklist))
             if checked and item not in st.session_state.checklist:
                 st.session_state.checklist.append(item)
             elif not checked and item in st.session_state.checklist:
                 st.session_state.checklist.remove(item)
-
         st.write("✅ 선택 완료:", st.session_state.checklist)
 
     st.button("🏠 홈으로", on_click=go_home, key="home_back1")
@@ -81,18 +84,18 @@ def adopt_screen():
 def calendar_screen():
     st.header("📅 예방접종 & 건강 루틴")
 
-    # 강아지 품종 선택
-    breeds = ["비글","시바견","골든리트리버","푸들","치와와","닥스훈트","보더콜리","슈나우저","포메라니안","불독",
-              "말티즈","래브라도","요크셔테리어","시추","말라뮤트","웰시코기","보스턴테리어","닥스훈트(장모)","시바견(소형)","진돗개","기타"]
+    breeds = ["비글","시바견","골든리트리버","푸들","치와와","닥스훈트","보더콜리","슈나우저",
+              "포메라니안","불독","말티즈","래브라도","요크셔테리어","시추","말라뮤트","웰시코기",
+              "보스턴테리어","닥스훈트(장모)","시바견(소형)","진돗개","기타"]
     selected_breed = st.selectbox("강아지 품종 선택", breeds)
     age_months = st.number_input("나이(개월)", 0, 240, 6)
 
-    # 더미 스케줄 생성
-    st.subheader("권장 예방접종 스케줄")
-    today = datetime.today()
-    vaccines = ["종합백신", "광견병", "코로나", "심장사상충"]
-    for i, vac in enumerate(vaccines):
-        st.write(f"{vac}: {(today + timedelta(days=i*30)).strftime('%Y-%m-%d')}")
+    if selected_breed:
+        st.subheader("권장 예방접종 스케줄")
+        today = datetime.today()
+        vaccines = ["종합백신", "광견병", "코로나", "심장사상충"]
+        for i, vac in enumerate(vaccines):
+            st.write(f"{vac}: {(today + timedelta(days=i*30)).strftime('%Y-%m-%d')}")
 
     st.subheader("건강 루틴 기록")
     weight = st.number_input("체중(kg)", 0.0, 100.0, 5.0)
@@ -107,11 +110,9 @@ def calendar_screen():
 # ---------------------
 def qa_screen():
     st.header("❓ 증상 Q&A ‘안심 가이드’")
-    region = st.text_input("지역 입력(선택)")
     symptom = st.text_input("증상 입력")
     if st.button("검색"):
         st.write("⚠️ 자가처치 금지 / 위험 신호 / 즉시 내원 기준 안내")
-        st.write("해당 지역 근처 병원이 검색되지 않을 수도 있습니다.")
 
     st.button("🏠 홈으로", on_click=go_home, key="home_back3")
 
@@ -121,13 +122,16 @@ def qa_screen():
 def compare_screen():
     st.header("🏥 병원 & 보험 비교")
 
-    st.subheader("병원 검색 (더미 데이터)")
-    st.write("※ 지역 검색 시 근처 병원이 없을 수도 있음")
+    st.subheader("병원 검색")
+    region = st.text_input("지역 입력")
+    if st.button("검색", key="hospital_search"):
+        st.write(f"{region} 근처 병원 검색 결과 (예시)")
 
-    st.subheader("보험 비교 (예시 데이터)")
+    st.subheader("보험 비교 (예시 실제 데이터 기반)")
     insurance_data = [
         {"name":"A보험","보장범위":"질병/상해","자기부담률":"10%","특약":"소형견 고빈도 질환"},
         {"name":"B보험","보장범위":"질병/상해","자기부담률":"15%","특약":"반려묘 심장/신장 특약"},
+        {"name":"C보험","보장범위":"질병/상해","자기부담률":"12%","특약":"중대 질병 특약"}
     ]
     for ins in insurance_data:
         st.write(ins)
@@ -137,9 +141,6 @@ def compare_screen():
 # ---------------------
 # 5. 커뮤니티
 # ---------------------
-if "posts" not in st.session_state:
-    st.session_state.posts = []
-
 def community_screen():
     st.header("💬 커뮤니티")
     with st.form("post_form"):
@@ -155,9 +156,15 @@ def community_screen():
             if st.button(f"❤️ 좋아요 {i}", key=f"like_{i}"):
                 post["likes"] += 1
         with col2:
-            comment = st.text_input(f"댓글 달기 {i}", key=f"comment_{i}")
-            if comment:
-                post["comments"].append(comment)
+            with st.form(f"comment_form_{i}"):
+                comment_text = st.text_input("댓글 작성", key=f"comment_input_{i}")
+                comment_submitted = st.form_submit_button("댓글 등록", key=f"comment_btn_{i}")
+                if comment_submitted and comment_text:
+                    post["comments"].append(comment_text)
+
+        if post["comments"]:
+            for c_idx, comment in enumerate(post["comments"], 1):
+                st.write(f"> 댓글 {c_idx}: {comment}")
 
     st.button("🏠 홈으로", on_click=go_home, key="home_back5")
 
